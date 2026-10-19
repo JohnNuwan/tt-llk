@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <limits>
+
 #include "ckernel_sfpu_polyval.h"
 #include "sfpi.h"
 
@@ -39,7 +41,15 @@ inline void _calculate_silu_()
             result = 1.0f - result;
         }
         v_endif;
-        sfpi::dst_reg[0] = val * result;
+        // At val = -inf, result is 0.0f and (-inf) * 0.0f produces NaN
+        // instead of lim_{x -> -inf} x * sigmoid(x) = 0.0f.
+        sfpi::vFloat out = val * result;
+        v_if (val == -std::numeric_limits<float>::infinity())
+        {
+            out = 0.0f;
+        }
+        v_endif;
+        sfpi::dst_reg[0] = out;
         sfpi::dst_reg++;
     }
 }
